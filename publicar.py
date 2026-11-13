@@ -2,7 +2,7 @@ import os, sys, time, base64, random, colorsys, subprocess, requests
 from io import BytesIO
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 
 HORAS = [8, 11, 14, 17, 20]  # hora de Florida
 IG_TOKEN = os.environ["IG_TOKEN"]
@@ -61,7 +61,7 @@ ESCENAS = [
     "a matte black sports car in an underground parking garage",
     "a stairwell in an old apartment building with harsh light",
     "a pile of gold coins glowing in darkness",
-    "a street corner in the barrio at sunset, palm trees silhouettes",
+    "a street corner in the barrio at sunset, palm tree silhouettes",
     "a dark room with a single light bulb and money on the table",
     "train tracks at night with fog and red lights",
     "a vintage muscle car on an empty highway at night",
@@ -72,23 +72,25 @@ ESCENAS = [
     "a dark bridge over a river with city lights",
     "a cracked mirror on a grimy wall, red neon light",
     "a motorcycle parked on a wet street under neon lights",
-    "a black and gold abstract smoke background, luxury mood",
+    "black and gold abstract smoke, luxury mood",
     "an old boxing gym with a hanging heavy bag, gritty light",
-    "a dark street mural of a lion in gold and red paint",
+    "a street mural of a lion painted in gold and red",
 ]
 
 def fondo_ia():
     escena = random.choice(ESCENAS)
-    prompt = (f"Photorealistic, cinematic, dark and moody: {escena}. "
-              "Vertical composition. No people's faces, no text, no letters, no logos, no weapons.")
     print("Escena:", escena)
+    prompt = (f"Photorealistic, cinematic, dark and moody: {escena}. "
+              "Vertical composition. No faces, no text, no letters, no logos, no weapons.")
     r = requests.post(
         "https://api.openai.com/v1/images/generations",
         headers={"Authorization": f"Bearer {OPENAI_KEY}"},
-        json={"model": "dall-e-3", "prompt": prompt, "size": "1024x1792",
-              "response_format": "b64_json", "n": 1},
-        timeout=120,
+        json={"model": "gpt-image-1", "prompt": prompt,
+              "size": "1024x1536", "quality": "medium", "n": 1},
+        timeout=180,
     )
+    if r.status_code != 200:
+        print("Respuesta de OpenAI:", r.text)
     r.raise_for_status()
     datos = base64.b64decode(r.json()["data"][0]["b64_json"])
     img = Image.open(BytesIO(datos)).convert("RGB")
@@ -112,15 +114,13 @@ except Exception as e:
     print("Falló la imagen de IA, uso color:", e)
     img = fondo_color()
 
-# oscurecer para que se lea la frase
 img = Image.blend(img, Image.new("RGB", (W, H), (0, 0, 0)), 0.45)
 d = ImageDraw.Draw(img)
 
 # ---------------- TEXTO ----------------
 NEGRITA = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FINA = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-MARGEN = 90
-ANCHO_MAX = W - 2 * MARGEN
+ANCHO_MAX = W - 180
 
 def partir(texto, fuente):
     lineas, actual = [], ""
@@ -141,9 +141,9 @@ tam = 84
 while True:
     fuente = ImageFont.truetype(NEGRITA, tam)
     lineas = partir(texto, fuente)
-    cabe_ancho = all(d.textlength(l, font=fuente) <= ANCHO_MAX for l in lineas)
+    cabe = all(d.textlength(l, font=fuente) <= ANCHO_MAX for l in lineas)
     alto = len(lineas) * int(tam * 1.3)
-    if (cabe_ancho and alto < H * 0.6) or tam <= 32:
+    if (cabe and alto < H * 0.6) or tam <= 32:
         break
     tam -= 4
 
@@ -158,8 +158,8 @@ for linea in lineas:
 capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 dc = ImageDraw.Draw(capa)
 pie = ImageFont.truetype(FINA, 36)
-ancho_marca = dc.textlength(MARCA, font=pie)
-dc.text(((W - ancho_marca) / 2, H - 100), MARCA, font=pie, fill=(255, 255, 255, 230))
+dc.text(((W - dc.textlength(MARCA, font=pie)) / 2, H - 100), MARCA,
+        font=pie, fill=(255, 255, 255, 230))
 img = Image.alpha_composite(img.convert("RGBA"), capa).convert("RGB")
 
 # ---------------- GUARDAR Y SUBIR ----------------
