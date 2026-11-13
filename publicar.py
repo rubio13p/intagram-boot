@@ -72,7 +72,7 @@ ESCENAS = [
     "a dark bridge over a river with city lights",
     "a cracked mirror on a grimy wall, red neon light",
     "a motorcycle parked on a wet street under neon lights",
-    "black and gold abstract smoke, luxury mood",
+    "black and gold smoke on a dark background, luxury mood",
     "an old boxing gym with a hanging heavy bag, gritty light",
     "a street mural of a lion painted in gold and red",
 ]
@@ -85,13 +85,13 @@ def fondo_ia():
     r = requests.post(
         "https://api.openai.com/v1/images/generations",
         headers={"Authorization": f"Bearer {OPENAI_KEY}"},
-        json={"model": "gpt-image-1", "prompt": prompt,
+        json={"model": "gpt-image-2.5-flare", "prompt": prompt,
               "size": "1024x1536", "quality": "medium", "n": 1},
         timeout=180,
     )
     if r.status_code != 200:
         print("Respuesta de OpenAI:", r.text)
-    r.raise_for_status()
+        raise Exception(r.text)
     datos = base64.b64decode(r.json()["data"][0]["b64_json"])
     img = Image.open(BytesIO(datos)).convert("RGB")
     escala = max(W / img.width, H / img.height)
@@ -114,13 +114,15 @@ except Exception as e:
     print("Falló la imagen de IA, uso color:", e)
     img = fondo_color()
 
+# oscurecer un poco para que se lea la frase
 img = Image.blend(img, Image.new("RGB", (W, H), (0, 0, 0)), 0.45)
 d = ImageDraw.Draw(img)
 
 # ---------------- TEXTO ----------------
 NEGRITA = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FINA = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-ANCHO_MAX = W - 180
+MARGEN = 90
+ANCHO_MAX = W - 2 * MARGEN
 
 def partir(texto, fuente):
     lineas, actual = [], ""
@@ -158,8 +160,8 @@ for linea in lineas:
 capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 dc = ImageDraw.Draw(capa)
 pie = ImageFont.truetype(FINA, 36)
-dc.text(((W - dc.textlength(MARCA, font=pie)) / 2, H - 100), MARCA,
-        font=pie, fill=(255, 255, 255, 230))
+ancho_marca = dc.textlength(MARCA, font=pie)
+dc.text(((W - ancho_marca) / 2, H - 100), MARCA, font=pie, fill=(255, 255, 255, 230))
 img = Image.alpha_composite(img.convert("RGBA"), capa).convert("RGB")
 
 # ---------------- GUARDAR Y SUBIR ----------------
