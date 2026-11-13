@@ -1,6 +1,4 @@
-Ahora pega esto en el cuadro grande:
 
-```yaml
 name: Publicar en Instagram
 
 on:
@@ -30,6 +28,4 @@ jobs:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           FORZAR: ${{ github.event.inputs.forzar }}
-```
 
-Esto despierta al bot cada hora, y el código solo publica si es una de tus cinco horas. También te deja publicar a mano para probar. Luego dale a "Commit changes" dos veces.
